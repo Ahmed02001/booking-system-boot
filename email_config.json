@@ -1,0 +1,11 @@
+{
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "sender_email": "your_email@gmail.com",
+  "sender_password": "your_app_password_here",
+  "use_tls": true,
+  "admin_email": "admin@yourdomain.com",
+  "email_subject_prefix": "[MyVisit] ",
+  "email_delay_seconds": 1,
+  "enabled": true
+}

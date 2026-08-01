@@ -1,0 +1,257 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>إدارة العملاء</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- الشريط العلوي -->
+      <nav class="navbar">
+        <div class="nav-brand">
+          <span class="logo">⚡</span>
+          <span class="brand-name">نظام الحجز التلقائي</span>
+        </div>
+        <div class="nav-links">
+          <a href="/">🏠 الرئيسية</a>
+          <a href="/clients" class="active">👥 العملاء</a>
+          <a href="/booking">📅 الحجز</a>
+          <a href="/results">📊 النتائج</a>
+        </div>
+      </nav>
+
+      <!-- المحتوى -->
+      <div class="main-content">
+        <div class="page-header">
+          <h2>👥 إدارة العملاء</h2>
+          <button class="btn btn-primary" onclick="showAddClient()">
+            ➕ إضافة عميل
+          </button>
+        </div>
+
+        <!-- إحصائيات -->
+        <div class="stats-row">
+          <span id="clientsCount">عدد العملاء: 0</span>
+          <span id="clientsWithEmail">📧 مع إيميل: 0</span>
+        </div>
+
+        <!-- جدول العملاء -->
+        <div class="table-container">
+          <table id="clientsTable">
+            <thead>
+              <tr>
+                <th>رقم الهوية</th>
+                <th>رقم الخدمة</th>
+                <th>البريد الإلكتروني</th>
+                <th>الاسم</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="clientsTableBody">
+              <tr>
+                <td colspan="6" class="text-center">جاري تحميل العملاء...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- نافذة إضافة عميل -->
+    <div class="modal" id="addClientModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>➕ إضافة عميل جديد</h3>
+          <span class="modal-close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>رقم الهوية *</label>
+            <input type="text" id="clientId" placeholder="أدخل رقم الهوية" />
+          </div>
+          <div class="form-group">
+            <label>رقم الخدمة *</label>
+            <input
+              type="text"
+              id="clientService"
+              placeholder="مثل: 4937"
+              value="4937"
+            />
+          </div>
+          <div class="form-group">
+            <label>البريد الإلكتروني</label>
+            <input
+              type="email"
+              id="clientEmail"
+              placeholder="example@email.com"
+            />
+          </div>
+          <div class="form-group">
+            <label>الاسم</label>
+            <input type="text" id="clientName" placeholder="الاسم الكامل" />
+          </div>
+          <div class="form-group">
+            <label>الكوكيز (Cookie) *</label>
+            <textarea
+              id="clientCookie"
+              rows="4"
+              placeholder="أدخل الكوكيز من المتصفح"
+            ></textarea>
+            <small class="help-text"
+              >انسخ الكوكيز من متصفحك بعد تسجيل الدخول</small
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal()">
+            إلغاء
+          </button>
+          <button class="btn btn-primary" onclick="saveClient()">
+            💾 حفظ العميل
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+    <script>
+      // تحميل العملاء عند فتح الصفحة
+      loadClients();
+
+      function loadClients() {
+        fetch("/api/clients")
+          .then((res) => res.json())
+          .then((data) => {
+            const tbody = document.getElementById("clientsTableBody");
+
+            if (data.success && data.data.length > 0) {
+              tbody.innerHTML = data.data
+                .map(
+                  (client) => `
+                            <tr>
+                                <td>${client.id_number}</td>
+                                <td>${client.service_id}</td>
+                                <td>${client.email || "غير مسجل"}</td>
+                                <td>${client.name || client.id_number}</td>
+                                <td><span class="badge badge-pending">⏳ في الانتظار</span></td>
+                                <td>
+                                    <button class="btn-small btn-danger" onclick="deleteClient('${client.id_number}')">🗑️</button>
+                                </td>
+                            </tr>
+                        `,
+                )
+                .join("");
+
+              document.getElementById("clientsCount").textContent =
+                `عدد العملاء: ${data.data.length}`;
+              const withEmail = data.data.filter((c) => c.email).length;
+              document.getElementById("clientsWithEmail").textContent =
+                `📧 مع إيميل: ${withEmail}`;
+            } else {
+              tbody.innerHTML =
+                '<tr><td colspan="6" class="text-center">لا يوجد عملاء</td></tr>';
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            document.getElementById("clientsTableBody").innerHTML =
+              '<tr><td colspan="6" class="text-center text-danger">❌ فشل تحميل العملاء</td></tr>';
+          });
+      }
+
+      function showAddClient() {
+        document.getElementById("addClientModal").style.display = "block";
+      }
+
+      function closeModal() {
+        document.getElementById("addClientModal").style.display = "none";
+        // تنظيف الحقول
+        document.getElementById("clientId").value = "";
+        document.getElementById("clientService").value = "4937";
+        document.getElementById("clientEmail").value = "";
+        document.getElementById("clientName").value = "";
+        document.getElementById("clientCookie").value = "";
+      }
+
+      function saveClient() {
+        const idNumber = document.getElementById("clientId").value.trim();
+        const serviceId = document.getElementById("clientService").value.trim();
+        const email = document.getElementById("clientEmail").value.trim();
+        const name = document.getElementById("clientName").value.trim();
+        const cookie = document.getElementById("clientCookie").value.trim();
+
+        if (!idNumber || !serviceId || !cookie) {
+          alert("❌ رقم الهوية ورقم الخدمة والكوكيز مطلوبة");
+          return;
+        }
+
+        const client = {
+          id_number: idNumber,
+          service_id: serviceId,
+          email: email,
+          name: name || idNumber,
+          parsed_header: {
+            cookie: cookie,
+            "user-agent":
+              "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15",
+            "accept-language": "ar",
+          },
+        };
+
+        fetch("/api/clients", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(client),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              alert("✅ تم إضافة العميل بنجاح");
+              closeModal();
+              loadClients();
+            } else {
+              alert("❌ فشل إضافة العميل: " + data.error);
+            }
+          })
+          .catch((error) => {
+            alert("❌ خطأ: " + error);
+          });
+      }
+
+      function deleteClient(idNumber) {
+        if (!confirm(`هل أنت متأكد من حذف العميل ${idNumber}؟`)) return;
+
+        fetch(`/api/clients/${idNumber}`, {
+          method: "DELETE",
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              alert("✅ تم حذف العميل");
+              loadClients();
+            } else {
+              alert("❌ فشل الحذف: " + data.error);
+            }
+          })
+          .catch((error) => {
+            alert("❌ خطأ: " + error);
+          });
+      }
+
+      // إغلاق المودال عند النقر خارجها
+      window.onclick = function (event) {
+        const modal = document.getElementById("addClientModal");
+        if (event.target === modal) {
+          closeModal();
+        }
+      };
+    </script>
+  </body>
+</html>

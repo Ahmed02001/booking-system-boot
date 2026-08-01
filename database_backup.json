@@ -1,0 +1,13 @@
+[
+  {
+    "id_number": "123456789",
+    "service_id": "4937",
+    "email": "client@example.com",
+    "name": "أحمد محمد",
+    "parsed_header": {
+      "cookie": "rbzid=your_cookie_here; rbzsessionid=your_session; _ga=your_ga",
+      "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+      "accept-language": "ar"
+    }
+  }
+]

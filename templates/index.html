@@ -1,0 +1,169 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>نظام الحجز التلقائي - الرئيسية</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- الشريط العلوي -->
+      <nav class="navbar">
+        <div class="nav-brand">
+          <span class="logo">⚡</span>
+          <span class="brand-name">نظام الحجز التلقائي</span>
+        </div>
+        <div class="nav-links">
+          <a href="/" class="active">🏠 الرئيسية</a>
+          <a href="/clients">👥 العملاء</a>
+          <a href="/booking">📅 الحجز</a>
+          <a href="/results">📊 النتائج</a>
+        </div>
+        <div class="nav-status">
+          <span id="statusIndicator" class="status-offline">⏹️ غير نشط</span>
+        </div>
+      </nav>
+
+      <!-- المحتوى الرئيسي -->
+      <div class="main-content">
+        <div class="hero-section">
+          <h1>🚀 نظام الحجز التلقائي</h1>
+          <p class="subtitle">
+            قم بإدارة وحجز المواعيد لجميع العملاء بسهولة وسرعة
+          </p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <div class="stat-number" id="totalClients">0</div>
+              <div class="stat-label">إجمالي العملاء</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <div class="stat-number" id="successCount">0</div>
+              <div class="stat-label">حجوزات ناجحة</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">❌</div>
+            <div class="stat-info">
+              <div class="stat-number" id="failedCount">0</div>
+              <div class="stat-label">حجوزات فاشلة</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📧</div>
+            <div class="stat-info">
+              <div class="stat-number" id="emailsSent">0</div>
+              <div class="stat-label">إيميلات مرسلة</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- سجل العمليات -->
+        <div class="log-section">
+          <div class="log-header">
+            <span class="log-title">📋 سجل العمليات</span>
+            <button class="btn-clear" onclick="clearLogs()">🗑️ مسح</button>
+          </div>
+          <div class="log-container" id="logContainer">
+            <div class="log-entry">⏳ في انتظار بدء العمليات...</div>
+          </div>
+        </div>
+
+        <!-- أزرار سريعة -->
+        <div class="quick-actions">
+          <button
+            class="btn btn-primary"
+            onclick="window.location.href = '/booking'"
+          >
+            🚀 بدء الحجز
+          </button>
+          <button
+            class="btn btn-secondary"
+            onclick="window.location.href = '/clients'"
+          >
+            👥 إدارة العملاء
+          </button>
+          <button
+            class="btn btn-info"
+            onclick="window.location.href = '/results'"
+          >
+            📊 عرض النتائج
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+    <script>
+      // تحديث الإحصائيات كل 5 ثواني
+      setInterval(updateStats, 5000);
+      setInterval(updateLogs, 3000);
+
+      function updateStats() {
+        fetch("/api/booking/status")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data) {
+              const results = data.results || {};
+              const success = Object.values(results).filter(
+                (r) => r.success,
+              ).length;
+              const failed = Object.values(results).filter(
+                (r) => !r.success,
+              ).length;
+
+              document.getElementById("totalClients").textContent =
+                data.total_clients || 0;
+              document.getElementById("successCount").textContent = success;
+              document.getElementById("failedCount").textContent = failed;
+
+              // تحديث حالة السيرفر
+              const indicator = document.getElementById("statusIndicator");
+              if (data.is_running) {
+                indicator.textContent = "🟢 قيد التشغيل";
+                indicator.className = "status-online";
+              } else {
+                indicator.textContent = "⏹️ غير نشط";
+                indicator.className = "status-offline";
+              }
+            }
+          })
+          .catch(console.error);
+      }
+
+      function updateLogs() {
+        fetch("/api/logs")
+          .then((res) => res.json())
+          .then((data) => {
+            const container = document.getElementById("logContainer");
+            if (data.logs && data.logs.length > 0) {
+              container.innerHTML = data.logs
+                .map((log) => `<div class="log-entry">${log}</div>`)
+                .join("");
+              container.scrollTop = container.scrollHeight;
+            }
+          })
+          .catch(console.error);
+      }
+
+      function clearLogs() {
+        document.getElementById("logContainer").innerHTML = "";
+      }
+
+      // تحديث فوري عند التحميل
+      updateStats();
+      updateLogs();
+    </script>
+  </body>
+</html>

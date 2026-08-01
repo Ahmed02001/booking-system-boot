@@ -1,0 +1,293 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>بدء الحجز</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <nav class="navbar">
+        <div class="nav-brand">
+          <span class="logo">⚡</span>
+          <span class="brand-name">نظام الحجز التلقائي</span>
+        </div>
+        <div class="nav-links">
+          <a href="/">🏠 الرئيسية</a>
+          <a href="/clients">👥 العملاء</a>
+          <a href="/booking" class="active">📅 الحجز</a>
+          <a href="/results">📊 النتائج</a>
+        </div>
+      </nav>
+
+      <div class="main-content">
+        <div class="page-header">
+          <h2>📅 بدء عملية الحجز</h2>
+          <span id="bookingStatus" class="status-badge">⏹️ غير نشط</span>
+        </div>
+
+        <div class="booking-grid">
+          <!-- إعدادات الحجز -->
+          <div class="settings-panel">
+            <h3>⚙️ إعدادات الحجز</h3>
+
+            <div class="form-group">
+              <label>📅 تاريخ الحجز</label>
+              <input type="date" id="bookingDate" value="2026-08-01" />
+            </div>
+
+            <div class="form-group">
+              <label>⚡ عدد الخيوط المتزامنة</label>
+              <input
+                type="number"
+                id="maxWorkers"
+                value="50"
+                min="1"
+                max="200"
+              />
+            </div>
+
+            <div class="form-group checkbox">
+              <label>
+                <input type="checkbox" id="autoLaunch" checked />
+                ⏰ جدولة دقيقة
+              </label>
+              <small>الانتظار حتى وقت الحجز المحدد</small>
+            </div>
+
+            <div class="form-group checkbox">
+              <label>
+                <input type="checkbox" id="retryEnabled" checked />
+                🔄 إعادة المحاولة للفاشلين
+              </label>
+            </div>
+
+            <div class="form-group checkbox">
+              <label>
+                <input type="checkbox" id="sendEmails" checked />
+                📧 إرسال إيميلات التأكيد
+              </label>
+            </div>
+
+            <div class="button-group">
+              <button
+                class="btn btn-success btn-large"
+                onclick="startBooking()"
+                id="startBtn"
+              >
+                🚀 بدء الحجز
+              </button>
+              <button
+                class="btn btn-danger btn-large"
+                onclick="stopBooking()"
+                id="stopBtn"
+                style="display: none"
+              >
+                ⏹️ إيقاف
+              </button>
+            </div>
+          </div>
+
+          <!-- تقدم العملية -->
+          <div class="progress-panel">
+            <h3>📊 تقدم العملية</h3>
+
+            <div class="progress-stats">
+              <div class="stat-item">
+                <span class="stat-label">👥 إجمالي العملاء:</span>
+                <span class="stat-value" id="totalClients">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">✅ المنجز:</span>
+                <span class="stat-value" id="completedClients">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">📈 نسبة الإنجاز:</span>
+                <span class="stat-value" id="progressPercent">0%</span>
+              </div>
+            </div>
+
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                id="progressFill"
+                style="width: 0%"
+              ></div>
+            </div>
+
+            <div class="results-preview" id="resultsPreview">
+              <div class="result-row">
+                <span class="result-label">✅ نجح:</span>
+                <span class="result-value success" id="successCount">0</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">❌ فشل:</span>
+                <span class="result-value failed" id="failedCount">0</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">📧 إيميلات مرسلة:</span>
+                <span class="result-value" id="emailsCount">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- سجل الحجز -->
+        <div class="log-section">
+          <div class="log-header">
+            <span class="log-title">📋 سجل الحجز</span>
+            <button class="btn-clear" onclick="clearBookingLogs()">
+              🗑️ مسح
+            </button>
+          </div>
+          <div class="log-container" id="bookingLogContainer">
+            <div class="log-entry">⏳ في انتظار بدء الحجز...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+    <script>
+      let statusInterval = null;
+
+      function startBooking() {
+        const data = {
+          date: document.getElementById("bookingDate").value,
+          auto_launch: document.getElementById("autoLaunch").checked,
+          retry_enabled: document.getElementById("retryEnabled").checked,
+          max_workers:
+            parseInt(document.getElementById("maxWorkers").value) || 50,
+          send_emails: document.getElementById("sendEmails").checked,
+        };
+
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("startBtn").textContent = "⏳ جاري التشغيل...";
+
+        fetch("/api/booking/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              document.getElementById("startBtn").style.display = "none";
+              document.getElementById("stopBtn").style.display = "inline-block";
+              document.getElementById("bookingStatus").textContent =
+                "🟢 قيد التشغيل";
+              document.getElementById("bookingStatus").className =
+                "status-badge online";
+
+              // بدء تحديث الحالة
+              if (statusInterval) clearInterval(statusInterval);
+              statusInterval = setInterval(updateBookingStatus, 2000);
+            } else {
+              alert("❌ فشل بدء الحجز: " + data.error);
+              document.getElementById("startBtn").disabled = false;
+              document.getElementById("startBtn").textContent = "🚀 بدء الحجز";
+            }
+          })
+          .catch((error) => {
+            alert("❌ خطأ: " + error);
+            document.getElementById("startBtn").disabled = false;
+            document.getElementById("startBtn").textContent = "🚀 بدء الحجز";
+          });
+      }
+
+      function stopBooking() {
+        if (!confirm("هل أنت متأكد من إيقاف عملية الحجز؟")) return;
+
+        fetch("/api/booking/stop", {
+          method: "POST",
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              document.getElementById("startBtn").style.display =
+                "inline-block";
+              document.getElementById("stopBtn").style.display = "none";
+              document.getElementById("bookingStatus").textContent =
+                "⏹️ تم الإيقاف";
+              document.getElementById("bookingStatus").className =
+                "status-badge offline";
+              document.getElementById("startBtn").disabled = false;
+              document.getElementById("startBtn").textContent = "🚀 بدء الحجز";
+
+              if (statusInterval) {
+                clearInterval(statusInterval);
+                statusInterval = null;
+              }
+            }
+          })
+          .catch(console.error);
+      }
+
+      function updateBookingStatus() {
+        fetch("/api/booking/status")
+          .then((res) => res.json())
+          .then((data) => {
+            // تحديث التقدم
+            document.getElementById("totalClients").textContent =
+              data.total_clients || 0;
+            document.getElementById("completedClients").textContent =
+              data.completed || 0;
+            document.getElementById("progressPercent").textContent =
+              data.progress + "%";
+            document.getElementById("progressFill").style.width =
+              data.progress + "%";
+
+            // تحديث النتائج
+            const results = data.results || {};
+            const success = Object.values(results).filter(
+              (r) => r.success,
+            ).length;
+            const failed = Object.values(results).filter(
+              (r) => !r.success,
+            ).length;
+            document.getElementById("successCount").textContent = success;
+            document.getElementById("failedCount").textContent = failed;
+
+            // تحديث السجل
+            const container = document.getElementById("bookingLogContainer");
+            if (data.logs && data.logs.length > 0) {
+              container.innerHTML = data.logs
+                .map((log) => `<div class="log-entry">${log}</div>`)
+                .join("");
+              container.scrollTop = container.scrollHeight;
+            }
+
+            // إذا انتهت العملية
+            if (!data.is_running && data.progress > 0) {
+              document.getElementById("startBtn").style.display =
+                "inline-block";
+              document.getElementById("stopBtn").style.display = "none";
+              document.getElementById("bookingStatus").textContent = "✅ مكتمل";
+              document.getElementById("bookingStatus").className =
+                "status-badge success";
+              document.getElementById("startBtn").disabled = false;
+              document.getElementById("startBtn").textContent = "🚀 بدء الحجز";
+
+              if (statusInterval) {
+                clearInterval(statusInterval);
+                statusInterval = null;
+              }
+            }
+          })
+          .catch(console.error);
+      }
+
+      function clearBookingLogs() {
+        document.getElementById("bookingLogContainer").innerHTML = "";
+      }
+
+      // تحديث الحالة كل 2 ثانية
+      setInterval(updateBookingStatus, 2000);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,166 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>النتائج</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <nav class="navbar">
+        <div class="nav-brand">
+          <span class="logo">⚡</span>
+          <span class="brand-name">نظام الحجز التلقائي</span>
+        </div>
+        <div class="nav-links">
+          <a href="/">🏠 الرئيسية</a>
+          <a href="/clients">👥 العملاء</a>
+          <a href="/booking">📅 الحجز</a>
+          <a href="/results" class="active">📊 النتائج</a>
+        </div>
+      </nav>
+
+      <div class="main-content">
+        <div class="page-header">
+          <h2>📊 نتائج الحجوزات</h2>
+          <div>
+            <button class="btn btn-secondary" onclick="exportResults()">
+              📤 تصدير
+            </button>
+            <button class="btn btn-info" onclick="refreshResults()">
+              🔄 تحديث
+            </button>
+          </div>
+        </div>
+
+        <!-- ملخص النتائج -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+              <div class="stat-number" id="totalResults">0</div>
+              <div class="stat-label">إجمالي النتائج</div>
+            </div>
+          </div>
+          <div class="stat-card success-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <div class="stat-number" id="successResults">0</div>
+              <div class="stat-label">نجح</div>
+            </div>
+          </div>
+          <div class="stat-card danger-card">
+            <div class="stat-icon">❌</div>
+            <div class="stat-info">
+              <div class="stat-number" id="failedResults">0</div>
+              <div class="stat-label">فشل</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📧</div>
+            <div class="stat-info">
+              <div class="stat-number" id="emailResults">0</div>
+              <div class="stat-label">إيميلات مرسلة</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- جدول النتائج -->
+        <div class="table-container">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th>رقم العميل</th>
+                <th>رقم الخدمة</th>
+                <th>الحالة</th>
+                <th>الموقع</th>
+                <th>التاريخ</th>
+                <th>الوقت</th>
+                <th>الخطأ</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+              <tr>
+                <td colspan="7" class="text-center">جاري تحميل النتائج...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+    <script>
+      function loadResults() {
+        fetch("/api/booking/results")
+          .then((res) => res.json())
+          .then((data) => {
+            const tbody = document.getElementById("resultsTableBody");
+
+            if (data.success && data.data && data.data.length > 0) {
+              const results = data.data;
+              const success = results.filter((r) => r.success).length;
+              const failed = results.filter((r) => !r.success).length;
+
+              document.getElementById("totalResults").textContent =
+                results.length;
+              document.getElementById("successResults").textContent = success;
+              document.getElementById("failedResults").textContent = failed;
+
+              tbody.innerHTML = results
+                .map((r) => {
+                  const status = r.success ? "✅ نجح" : "❌ فشل";
+                  const statusClass = r.success
+                    ? "badge-success"
+                    : "badge-danger";
+                  const slotTime = r.chosen_slot
+                    ? `${Math.floor(r.chosen_slot / 60)}:${String(r.chosen_slot % 60).padStart(2, "0")}`
+                    : "-";
+
+                  return `
+                                <tr>
+                                    <td>${r.id_number}</td>
+                                    <td>${r.service_id}</td>
+                                    <td><span class="badge ${statusClass}">${status}</span></td>
+                                    <td>${r.location_name || "-"}</td>
+                                    <td>${r.ref_date || "-"}</td>
+                                    <td>${slotTime}</td>
+                                    <td>${r.error_msg ? r.error_msg.substring(0, 30) + "..." : "-"}</td>
+                                </tr>
+                            `;
+                })
+                .join("");
+            } else {
+              tbody.innerHTML =
+                '<tr><td colspan="7" class="text-center">لا توجد نتائج</td></tr>';
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            document.getElementById("resultsTableBody").innerHTML =
+              '<tr><td colspan="7" class="text-center text-danger">❌ فشل تحميل النتائج</td></tr>';
+          });
+      }
+
+      function exportResults() {
+        window.location.href = "/api/booking/results";
+      }
+
+      function refreshResults() {
+        loadResults();
+        alert("✅ تم تحديث النتائج");
+      }
+
+      // تحميل النتائج عند فتح الصفحة
+      loadResults();
+
+      // تحديث تلقائي كل 10 ثواني
+      setInterval(loadResults, 10000);
+    </script>
+  </body>
+</html>
