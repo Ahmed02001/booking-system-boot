@@ -1,0 +1,22 @@
+[project]
+name = "booking-system"
+version = "1.0.0"
+description = "Automated booking system"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "flask>=2.3.0",
+    "flask-cors>=4.0.0",
+    "requests>=2.28.0",
+    "gunicorn>=21.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.vercel]
+entrypoint = "main:app"
+
+[tool.vercel.scripts]
+build = "pip install -r requirements.txt"
