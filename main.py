@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Optional
 from datetime import datetime
 
+from web_app import app
 from config import Config
 from api_client import MyVisitAPIClient
 from scheduler import PrecisionScheduler
