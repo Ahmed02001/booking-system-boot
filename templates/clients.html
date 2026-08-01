@@ -30,15 +30,89 @@
       <div class="main-content">
         <div class="page-header">
           <h2>👥 إدارة العملاء</h2>
-          <button class="btn btn-primary" onclick="showAddClient()">
-            ➕ إضافة عميل
-          </button>
         </div>
 
         <!-- إحصائيات -->
         <div class="stats-row">
           <span id="clientsCount">عدد العملاء: 0</span>
           <span id="clientsWithEmail">📧 مع إيميل: 0</span>
+        </div>
+
+        <!-- نموذج إضافة عميل مباشر -->
+        <div class="add-client-card">
+          <div class="add-client-header">
+            <h3>➕ إضافة عميل جديد</h3>
+            <span class="helper-text">أدخل بيانات العميل مباشرة هنا</span>
+          </div>
+
+          <form
+            id="addClientForm"
+            class="add-client-form"
+            onsubmit="
+              event.preventDefault();
+              saveClient();
+            "
+          >
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="clientId">رقم الهوية *</label>
+                <input
+                  type="text"
+                  id="clientId"
+                  placeholder="أدخل رقم الهوية"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="clientService">رقم الخدمة *</label>
+                <input
+                  type="text"
+                  id="clientService"
+                  placeholder="مثل: 4937"
+                  value="4937"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="clientEmail">البريد الإلكتروني</label>
+                <input
+                  type="email"
+                  id="clientEmail"
+                  placeholder="example@email.com"
+                />
+              </div>
+              <div class="form-group">
+                <label for="clientName">الاسم</label>
+                <input type="text" id="clientName" placeholder="الاسم الكامل" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="clientCookie">الكوكيز (Cookie) *</label>
+              <textarea
+                id="clientCookie"
+                rows="4"
+                placeholder="أدخل الكوكيز من المتصفح"
+                required
+              ></textarea>
+              <small class="help-text"
+                >انسخ الكوكيز من متصفحك بعد تسجيل الدخول</small
+              >
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                💾 حفظ العميل
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="clearClientForm()"
+              >
+                🧹 مسح
+              </button>
+            </div>
+          </form>
         </div>
 
         <!-- جدول العملاء -->
@@ -166,13 +240,7 @@
           });
       }
 
-      function showAddClient() {
-        document.getElementById("addClientModal").style.display = "block";
-      }
-
-      function closeModal() {
-        document.getElementById("addClientModal").style.display = "none";
-        // تنظيف الحقول
+      function clearClientForm() {
         document.getElementById("clientId").value = "";
         document.getElementById("clientService").value = "4937";
         document.getElementById("clientEmail").value = "";
@@ -214,7 +282,7 @@
           .then((data) => {
             if (data.success) {
               alert("✅ تم إضافة العميل بنجاح");
-              closeModal();
+              clearClientForm();
               loadClients();
             } else {
               alert("❌ فشل إضافة العميل: " + data.error);
@@ -244,14 +312,6 @@
             alert("❌ خطأ: " + error);
           });
       }
-
-      // إغلاق المودال عند النقر خارجها
-      window.onclick = function (event) {
-        const modal = document.getElementById("addClientModal");
-        if (event.target === modal) {
-          closeModal();
-        }
-      };
     </script>
   </body>
 </html>

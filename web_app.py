@@ -58,15 +58,66 @@ def results_page():
         return "<h1>النتائج</h1>"
 
 # ===== APIs =====
+
+def load_clients_data():
+    if os.path.exists("database_backup.json"):
+        with open("database_backup.json", 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+
+def save_clients_data(clients):
+    with open("database_backup.json", 'w', encoding='utf-8') as f:
+        json.dump(clients, f, ensure_ascii=False, indent=2)
+
+
 @app.route('/api/clients', methods=['GET'])
 def get_clients():
     try:
-        if os.path.exists("database_backup.json"):
-            with open("database_backup.json", 'r', encoding='utf-8') as f:
-                clients = json.load(f)
-        else:
-            clients = []
+        clients = load_clients_data()
         return jsonify({"success": True, "data": clients, "total": len(clients)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route('/api/clients', methods=['POST'])
+def add_client():
+    try:
+        data = request.get_json(silent=True) or {}
+        if not data.get("id_number") or not data.get("service_id"):
+            return jsonify({"success": False, "error": "رقم الهوية ورقم الخدمة مطلوبان"})
+
+        clients = load_clients_data()
+        client_id = str(data["id_number"])
+
+        for client in clients:
+            if str(client.get("id_number")) == client_id:
+                return jsonify({"success": False, "error": "هذا العميل موجود مسبقاً"})
+
+        new_client = {
+            "id_number": client_id,
+            "service_id": str(data.get("service_id")),
+            "email": data.get("email", ""),
+            "name": data.get("name") or client_id,
+            "parsed_header": data.get("parsed_header", {}),
+            "status": "pending"
+        }
+        clients.append(new_client)
+        save_clients_data(clients)
+        return jsonify({"success": True, "data": new_client})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route('/api/clients/<id_number>', methods=['DELETE'])
+def delete_client(id_number):
+    try:
+        clients = load_clients_data()
+        filtered = [c for c in clients if str(c.get("id_number")) != str(id_number)]
+        if len(filtered) == len(clients):
+            return jsonify({"success": False, "error": "العميل غير موجود"})
+        save_clients_data(filtered)
+        return jsonify({"success": True, "deleted_id": id_number})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
@@ -124,4 +175,4 @@ if __name__ == "__main__":
     print(f"📍 المنفذ: {PORT}")
     print(f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
-    app.run(host='0.0.0.0', port=PORT, debug=DEBUG)
+    app.run(host='0.0.0.0', port=PORT, debug=False)
