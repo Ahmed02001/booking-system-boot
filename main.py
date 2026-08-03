@@ -4,7 +4,7 @@ import time
 import random
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Optional
+from typing import List, Dict
 from datetime import datetime
 
 from config import Config
@@ -30,14 +30,15 @@ class BookingSystem:
         # تخزين النتائج
         self.results = {}
         self.clients = []
+        self.last_error = None
     
     def run_client_booking(self, client: Dict, proxy_info: Dict, slots: List[int],
                           target_date: str, prepare_target_ms: int, 
                           booking_target_ms: int, round_num: int = 1) -> Dict:
         """تنفيذ الحجز لزبون واحد"""
-        id_number = client["id_number"]
-        service_id = client["service_id"]
-        headers = client["headers"]
+        id_number = str(client.get("id_number", ""))
+        service_id = str(client.get("service_id", ""))
+        headers = client.get("headers") or {}
         prefix = f"[جولة {round_num}][{id_number} - خدمة {service_id}]"
         
         # اختيار ساعة عشوائية
@@ -58,14 +59,18 @@ class BookingSystem:
         position = proxy_info.get("position") if proxy_info else None
         
         try:
+            if not id_number or not service_id:
+                result["error_msg"] = "البيانات مفقودة: رقم الهوية أو رقم الخدمة"
+                return result
+
             # ── المرحلة 1: PrepareVisit ───────────────────────
             if self.config.AUTO_LAUNCH_ENABLED:
                 time.sleep(random.randint(0, 100) / 1000.0)
             else:
                 time.sleep(random.uniform(0.5, 1.5))
-            
+
             success, prepare_data = self.api_client.prepare_visit(
-                service_id=service_id,
+                service_id=int(service_id),
                 headers=headers,
                 proxy=proxy
             )
@@ -90,7 +95,7 @@ class BookingSystem:
             time.sleep(random.randint(0, 250) / 1000.0)
             
             success, booking_data = self.api_client.book_appointment(
-                service_id=service_id,
+                service_id=int(service_id),
                 appointment_date=target_date,
                 appointment_time=chosen_slot,
                 prepared_visit_id=prepared_visit_id,
@@ -110,9 +115,10 @@ class BookingSystem:
                 print(f"❌ {prefix}: فشل الحجز: {result['error_msg']}")
                 
         except Exception as e:
+            self.last_error = str(e)
             result["error_msg"] = f"خطأ غير متوقع: {str(e)}"
             print(f"❌ {prefix}: {result['error_msg']}")
-        
+
         return result
     
     def run_round(self, clients: List[Dict], proxies: List[Dict], 
@@ -176,6 +182,7 @@ class BookingSystem:
         
         if not self.clients:
             print("❌ لا يوجد زبائن للتشغيل")
+            self.results = {}
             return
         
         if not proxies:
@@ -230,6 +237,7 @@ class BookingSystem:
         # إحصاءات الجولة الأولى
         success_r1 = sum(1 for r in self.results.values() if r.get("success", False))
         failed_r1 = len(self.results) - success_r1
+        print(f"📌 تم تسجيل {len(self.results)} نتيجة من أصل {len(self.clients)} عميل")
         print(f"\n📊 [الجولة 1] ✅ نجح {success_r1} | ❌ فشل {failed_r1}")
         
         # ── الجولة الثانية (إعادة المحاولة) ──────────────

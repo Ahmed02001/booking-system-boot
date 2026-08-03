@@ -5,20 +5,20 @@ import json
 import os
 import threading
 from datetime import datetime
-import time
 import sys
 
 # إضافة المجلد الحالي إلى المسار
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from main import BookingSystem, run_with_clients
+from main import BookingSystem
 from database_handler import DatabaseHandler
 from email_sender import EmailSender
+from config import Config
 
 # إنشاء تطبيق Flask
-app = Flask(__name__, 
-            static_folder='static',
-            template_folder='templates')
+app = Flask(__name__,
+            static_folder=Config.resolve_path('static'),
+            template_folder=Config.resolve_path('templates'))
 CORS(app)
 
 # تهيئة المكونات
@@ -72,12 +72,7 @@ def serve_static(path):
 def get_clients():
     """الحصول على قائمة العملاء"""
     try:
-        # محاولة تحميل العملاء من الملف
-        if os.path.exists("database_backup.json"):
-            with open("database_backup.json", 'r', encoding='utf-8') as f:
-                clients = json.load(f)
-        else:
-            clients = []
+        clients = db_handler.load_clients(Config.resolve_path(Config.DATABASE_PATH))
         
         return jsonify({
             "success": True,
@@ -94,20 +89,32 @@ def get_clients():
 def add_client():
     """إضافة عميل جديد"""
     try:
-        client = request.json
-        
-        # تحميل العملاء الحاليين
-        if os.path.exists("database_backup.json"):
-            with open("database_backup.json", 'r', encoding='utf-8') as f:
+        payload = request.get_json(silent=True) or {}
+        if not payload.get("id_number") or not payload.get("service_id"):
+            return jsonify({"success": False, "error": "رقم الهوية ورقم الخدمة مطلوبان"})
+
+        client = {
+            "id_number": str(payload.get("id_number")),
+            "service_id": str(payload.get("service_id")),
+            "email": payload.get("email", ""),
+            "name": payload.get("name", payload.get("id_number", "")),
+            "parsed_header": payload.get("parsed_header") or {
+                "cookie": payload.get("cookie", ""),
+                "user-agent": "Mozilla/5.0",
+                "accept-language": "ar"
+            }
+        }
+
+        db_path = Config.resolve_path(Config.DATABASE_PATH)
+        if os.path.exists(db_path):
+            with open(db_path, 'r', encoding='utf-8') as f:
                 clients = json.load(f)
         else:
             clients = []
-        
-        # إضافة العميل الجديد
+
         clients.append(client)
-        
-        # حفظ الملف
-        with open("database_backup.json", 'w', encoding='utf-8') as f:
+
+        with open(db_path, 'w', encoding='utf-8') as f:
             json.dump(clients, f, ensure_ascii=False, indent=2)
         
         return jsonify({
@@ -124,15 +131,16 @@ def add_client():
 def delete_client(id_number):
     """حذف عميل"""
     try:
-        if os.path.exists("database_backup.json"):
-            with open("database_backup.json", 'r', encoding='utf-8') as f:
+        db_path = Config.resolve_path(Config.DATABASE_PATH)
+        if os.path.exists(db_path):
+            with open(db_path, 'r', encoding='utf-8') as f:
                 clients = json.load(f)
         else:
             clients = []
-        
-        clients = [c for c in clients if c.get("id_number") != id_number]
-        
-        with open("database_backup.json", 'w', encoding='utf-8') as f:
+
+        clients = [c for c in clients if str(c.get("id_number")) != str(id_number)]
+
+        with open(db_path, 'w', encoding='utf-8') as f:
             json.dump(clients, f, ensure_ascii=False, indent=2)
         
         return jsonify({
@@ -157,19 +165,14 @@ def start_booking():
         })
     
     try:
-        data = request.json
-        target_date = data.get('date', datetime.now().strftime("%Y-%m-%d"))
-        auto_launch = data.get('auto_launch', True)
-        retry_enabled = data.get('retry_enabled', True)
-        max_workers = data.get('max_workers', 50)
-        send_emails = data.get('send_emails', True)
-        
-        # تحميل العملاء
-        if os.path.exists("database_backup.json"):
-            with open("database_backup.json", 'r', encoding='utf-8') as f:
-                clients = json.load(f)
-        else:
-            clients = []
+        data = request.get_json(silent=True) or {}
+        target_date = data.get('date') or datetime.now().strftime("%Y-%m-%d")
+        auto_launch = bool(data.get('auto_launch', True))
+        retry_enabled = bool(data.get('retry_enabled', True))
+        max_workers = int(data.get('max_workers', 50))
+        send_emails = bool(data.get('send_emails', True))
+
+        clients = db_handler.load_clients(Config.resolve_path(Config.DATABASE_PATH))
         
         if not clients:
             return jsonify({
@@ -191,6 +194,7 @@ def start_booking():
         booking_status["total_clients"] = len(clients)
         booking_status["completed"] = 0
         booking_status["emails_sent"] = 0
+        booking_status["results"] = {}
         
         add_log(f"🚀 بدء عملية الحجز لتاريخ {target_date}")
         add_log(f"👥 عدد العملاء: {len(clients)}")
@@ -243,7 +247,7 @@ def get_booking_status():
 def get_results():
     """الحصول على النتائج النهائية"""
     try:
-        results_path = "results/booking_results.json"
+        results_path = Config.resolve_path(os.path.join(Config.RESULTS_DIR, "booking_results.json"))
         if os.path.exists(results_path):
             with open(results_path, 'r', encoding='utf-8') as f:
                 results = json.load(f)

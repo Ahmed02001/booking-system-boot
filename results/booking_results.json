@@ -1,0 +1,22 @@
+[
+  {
+    "id_number": "4532363",
+    "service_id": "4937",
+    "success": false,
+    "location_name": "",
+    "ref_date": "",
+    "error_msg": "فشل التحضير: HTTP 401",
+    "round": 2,
+    "chosen_slot": 858
+  },
+  {
+    "id_number": "123456789",
+    "service_id": "4937",
+    "success": false,
+    "location_name": "",
+    "ref_date": "",
+    "error_msg": "فشل التحضير: HTTP 401",
+    "round": 2,
+    "chosen_slot": 922
+  }
+]

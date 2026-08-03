@@ -34,8 +34,8 @@ class EmailSender:
             return {
                 "smtp_server": "smtp.gmail.com",
                 "smtp_port": 587,
-                "sender_email": "your_email@gmail.com",
-                "sender_password": "your_app_password",
+                "sender_email": "ahmedhamdyy787@gmail.com",
+                "sender_password": "jhig naso rtmi zpon",
                 "use_tls": True,
                 "admin_email": "admin@example.com",
                 "email_subject_prefix": "[MyVisit] ",
